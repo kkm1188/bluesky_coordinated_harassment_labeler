@@ -9,12 +9,13 @@ This labeler detects attempts of coordinated harassment using the following algo
 from typing import List, Dict, Tuple, Set
 from datetime import datetime, timedelta
 from collections import defaultdict
+from bisect import bisect_left, bisect_right
 import re
 from difflib import SequenceMatcher
 from atproto import Client
-
-# Import the label provided by the assignment GitHub repo
-# from pylabel.label import post_from_url
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # These are the label thresholds that we will use to determine the classification of threat
 LABEL_POTENTIAL_COORDINATION = "potential-coordination"
@@ -64,10 +65,7 @@ class CoordinatedHarassmentLabeler:
 
     def moderate_posts_batch(self, posts_data: List[dict]) -> Dict[str, List[str]]:
         """
-        Moderate a batch of posts (for use with data.csv).
-
-        This is useful for testing and evaluation where we have a dataset of posts
-        rather than fetching from URLs one at a time.
+        Moderate a batch of posts for synthetic data with .csv file
 
         This method uses two-pass processing:
         1. First pass: Cache all posts by target
@@ -77,6 +75,7 @@ class CoordinatedHarassmentLabeler:
             posts_data: List of post dictionaries with keys:
                 - post_id: unique identifier
                 - author_id: author identifier
+                - author_created_at: when author account was created
                 - timestamp: datetime or ISO string
                 - text: post content
                 - target_user: (optional) explicitly identified target
@@ -84,17 +83,31 @@ class CoordinatedHarassmentLabeler:
         Returns:
             Dictionary mapping post_id to list of labels
         """
-        # Sort posts by timestamp
-        sorted_posts = sorted(posts_data, key=lambda p: self._parse_timestamp(p['timestamp']))
+        # Parse all timestamps once and cache them (this helps mitigate redundant time stamping)
+        timestamp_cache = {}
+        for post in posts_data:
+            post_id = post['post_id']
+            timestamp_cache[post_id] = self._parse_timestamp(post['timestamp'])
 
-        # First pass: Build complete context for all targets
+        # Sort posts using cached timestamps
+        sorted_posts = sorted(posts_data, key=lambda p: timestamp_cache[p['post_id']])
+
+        # Build complete context dictionary for all posts in CSV file
         target_posts = defaultdict(list)
         for post_dict in sorted_posts:
             targets = self._identify_targets(post_dict)
             for target in targets:
                 target_posts[target].append(post_dict)
 
-        # Second pass: Evaluate each post with full context
+        # Create sorted timestamp-post pairs for a binary search of temporal window (more efficient than checking all posts for timestamps)
+        target_posts_sorted = {}
+        for target, posts in target_posts.items():
+            # Create list of (timestamp, post) tuples for binary search
+            posts_with_times = [(timestamp_cache[p['post_id']], p) for p in posts]
+            target_posts_sorted[target] = posts_with_times
+
+        # Evaluate each post with full context
+        ## MIGHT CHANGE THIS TO ONLY POSTS WITH NEGATIVE/ABUSIVE SENTIMENT ANALYSIS VIA LLM API
         results = {}
         for post_dict in sorted_posts:
             post_id = post_dict['post_id']
@@ -107,20 +120,27 @@ class CoordinatedHarassmentLabeler:
             labels = set()
             for target in targets:
                 # Get all posts about this target within temporal window
-                current_time = self._parse_timestamp(post_dict['timestamp'])
+                # temporal window = current_time - temporal time window
+                current_time = timestamp_cache[post_dict['post_id']]
                 window_start = current_time - timedelta(minutes=TEMPORAL_WINDOW_MINUTES)
 
-                # Filter posts within window
-                context_posts = [
-                    p for p in target_posts[target]
-                    if window_start <= self._parse_timestamp(p['timestamp']) <= current_time
-                ]
+                # Use binary search to find posts within time window
+                posts_with_times = target_posts_sorted[target]
+                timestamps_only = [t for t, p in posts_with_times]
 
+                # Binary search for range boundaries using python's bisect 
+                left_idx = bisect_left(timestamps_only, window_start)
+                right_idx = bisect_right(timestamps_only, current_time)
+
+                # Extract posts in the time window
+                context_posts = [p for t, p in posts_with_times[left_idx:right_idx]]
+
+                # Ensure theirs enough posts for coordinated harassment
                 if len(context_posts) < MIN_POSTS_FOR_COORDINATION:
                     continue
 
-                # Compute score and assign labels
-                score = self.compute_coordination_score(post_dict, context_posts)
+                # Compute score & assign labels
+                score = self.compute_coordination_score(post_dict, context_posts, timestamp_cache)
                 post_labels = self._labels_from_score(score)
                 labels.update(post_labels)
 
@@ -129,11 +149,11 @@ class CoordinatedHarassmentLabeler:
         return results
 
     # Coordination Score Computation
-    def compute_coordination_score(self, post: dict, group_context: List[dict]) -> float:
+    def compute_coordination_score(self, post: dict, group_context: List[dict], timestamp_cache: dict = None) -> float:
         """
-        Computes the coordination score for a post 
+        Computes the coordination score for a post
 
-        This algorithm combines three scores: 
+        This algorithm combines three scores:
         1. Temporal clustering (0-1): How concentrated are posts in time?
         2. Content similarity (0-1): How similar are the posts in content?
         3. Behavioral anomalies (0-1): Are there suspicious account patterns?
@@ -141,43 +161,40 @@ class CoordinatedHarassmentLabeler:
         Args:
             post: The post being analyzed
             group_context: List of all posts that mentions the target
-
+            timestamp_cache: Dict mapping post_id to parsed datetime for temporal score analysis
         Returns:
             Coordination score between 0 and 1
         """
-        
+
         # Extract the three signal scores from the helper methods
-        temporal_score = self._compute_temporal_signal(group_context)
+        temporal_score = self._compute_temporal_signal(group_context, timestamp_cache)
         similarity_score = self._compute_content_similarity_signal(group_context)
         behavioral_score = self._compute_behavioral_signal(group_context)
 
         # Combine computations through a weighted average
-        # Temporal and similarity signals are stronger indicators than behavioral signals
-        # High similarity + temporal clustering is the strongest signal for coordination
+        # Temporal and similarity signals are stronger indicators than behavioral signals, so we've added more weight to them
         weights = {
             'temporal': 0.30,
-            'similarity': 0.50,  # Highest weight - copy-paste is strongest indicator
+            'similarity': 0.50,  # Highest weight - copy-paste is strongest indicator!
             'behavioral': 0.20
         }
 
         coordination_score = (
-            weights['temporal'] * temporal_score +
-            weights['similarity'] * similarity_score +
-            weights['behavioral'] * behavioral_score
-        )
+            weights['temporal'] * temporal_score + weights['similarity'] * similarity_score + weights['behavioral'] * behavioral_score)
 
-        # Ensure score is in [0, 1]
+        # Ensure score is between 0 and 1
         return max(0.0, min(1.0, coordination_score))
 
     # Compute Temporal Signal Analysis
-    def _compute_temporal_signal(self, posts: List[dict]) -> float:
+    def _compute_temporal_signal(self, posts: List[dict], timestamp_cache: dict = None) -> float:
         """
         Computes the temporal clustering signal
-        
+
         Detects posts that mention the same target within a specific time window.
         A higher concentration of posts in shorter time = higher score
         Args:
             posts: List of post dicts
+            timestamp_cache: Dict mapping post_id to parsed datetime
         Returns:
             Temporal signal score (0-1)
         """
@@ -186,7 +203,12 @@ class CoordinatedHarassmentLabeler:
             return 0.0
 
         # Collecting timestamps from all posts, turning it to datetime datatype, & sorting
-        timestamps = [self._parse_timestamp(p['timestamp']) for p in posts]
+        if timestamp_cache:
+            timestamps = [timestamp_cache[p['post_id']] for p in posts]
+        else:
+            # Fallback for compatibility
+            ## DO WE NEED THIS? 
+            timestamps = [self._parse_timestamp(p['timestamp']) for p in posts]
         timestamps.sort()
 
         # Calculating the timespan in minutes via last timestamp - first timestamp
@@ -206,7 +228,8 @@ class CoordinatedHarassmentLabeler:
 
     def _compute_content_similarity_signal(self, posts: List[dict]) -> float:
         """
-        Computes content similarity signal
+        Computes content similarity signal using ML library scikit Learn: TF-IDF + cosine similarity. This vectorizes ngrams 
+        and compares similarity via matrix multiplication for a faster computation than brute force.
         Looks for similar text styles or copy/paste
         Args:
             posts: List of post dicts
@@ -217,29 +240,67 @@ class CoordinatedHarassmentLabeler:
         if len(posts) < 2:
             return 0.0
 
-        # Grabs the text from the posts
+        # Grabs the text from the posts and normalize
+        texts = [self._normalize_text(p.get('text', '')) for p in posts]
+
+        # Filter out empty texts
+        texts = [t for t in texts if len(t) > 0]
+        if len(texts) < 2:
+            return 0.0
+
+        # Vectorize using TF-IDF with character n-grams 
+        vectorizer = TfidfVectorizer(
+            analyzer='char',      # Character-level
+            ngram_range=(3, 5),   # Looking at 3-5 character n-grams
+            min_df=1              # Include all n-grams
+        )
+
+        try:
+            # Convert text to vectors
+            tfidf_matrix = vectorizer.fit_transform(texts)
+
+            # Compute all pairwise cosine similarities at once (vectorized = fast!)
+            similarity_matrix = cosine_similarity(tfidf_matrix)
+
+            # Extract similarities while avoiding redundancies
+            similarities = []
+            for i in range(len(texts)):
+                for j in range(i + 1, len(texts)):
+                    similarities.append(similarity_matrix[i, j])
+
+            if len(similarities) == 0:
+                return 0.0
+
+            avg_similarity = np.mean(similarities)
+
+        except (ValueError, AttributeError):
+            # Fallback to original brute force method if TF-IDF fails (i.e all texts too short or identical)
+            return self._compute_content_similarity_fallback(posts)
+
+        # Check for word for word repeated phrases (n-grams) with helper function
+        repeated_phrases_score = self._detect_repeated_phrases(texts)
+
+        # Combine the 2 scores with a slightly heavier weight to copy/paste & repeated phrases
+        return (0.4 * avg_similarity) + (0.6 * repeated_phrases_score)
+
+    def _compute_content_similarity_fallback(self, posts: List[dict]) -> float:
+        """
+        Fallback to original SequenceMatcher approach if TF-IDF fails
+        """
         texts = [p.get('text', '') for p in posts]
 
-        # Calculates pairwise similarities of the texts
         similarities = []
-        
         for i in range(len(texts)):
             for j in range(i + 1, len(texts)):
-                # Test similarities between 2 phrases
                 sim = self._text_similarity(texts[i], texts[j])
                 similarities.append(sim)
-                
-        # Making sure there is some smiliarity
+
         if len(similarities) == 0:
             return 0.0
 
-        # Average similarity
         avg_similarity = sum(similarities) / len(similarities)
-
-        # Check for repeated phrases (n-grams) with helper function
         repeated_phrases_score = self._detect_repeated_phrases(texts)
 
-        # Combine the 2 scores with a slightly heavier weight to repeated phrases
         return (0.4 * avg_similarity) + (0.6 * repeated_phrases_score)
 
     def _compute_behavioral_signal(self, posts: List[dict]) -> float:
@@ -249,7 +310,7 @@ class CoordinatedHarassmentLabeler:
         Detects suspicious account patterns:
         - New accounts (<30 days) participating in pile-ons
         - Accounts that suddenly spike in activity toward a single target
-        - Similar account creation times (potential sock puppets)
+        - Similar account creation times
         Args:
             posts: List of post dictionaries
         Returns:
@@ -258,7 +319,7 @@ class CoordinatedHarassmentLabeler:
         if len(posts) < 2:
             return 0.0
 
-        # Extract unique authors
+        # Extract unique authors from all posts in the temporal window
         authors = [p.get('author_id', '') for p in posts]
         unique_authors = list(set(authors))
 
@@ -269,24 +330,23 @@ class CoordinatedHarassmentLabeler:
         author_metadata = self._get_author_metadata(posts)
 
         signals = []
-        # 1: Proportion of new accounts
+        # computing new account -> unique authors ratio - seeing if its high
         new_account_count = sum(1 for author in unique_authors if self._is_new_account(author, author_metadata.get(author)))
         new_account_ratio = new_account_count /len(unique_authors)
         signals.append(new_account_ratio)
 
-        # 2: Account activity burst
-        # Check if these accounts are suddenly very active (multiple posts in group)
+        # Checking account activity bursts - i.e check if these accounts are suddenly very active (multiple posts in group)
         author_post_counts = defaultdict(int)
         for author in authors:
             author_post_counts[author] += 1
 
         avg_posts_per_author = sum(author_post_counts.values()) / len(author_post_counts)
+        
         # If average posts per author is high, it could suggest concentrated activity
         burst_score = min(1.0, (avg_posts_per_author - 1) / 3.0)  # Normalize
         signals.append(burst_score)
 
-        # 3: Diversity of participants
-        # Many different accounts posting = higher coordination likelihood
+        # Diversity of participants: many different accounts posting = higher coordination likelihood
         participation_diversity = min(1.0, len(unique_authors) / 10.0)
         signals.append(participation_diversity)
 
@@ -310,7 +370,8 @@ class CoordinatedHarassmentLabeler:
                 if 'author_created_at' in post:
                     author_metadata[author_id] = {'created_at': post['author_created_at']}
         return author_metadata
-    # 
+    
+    # Fallback method for checking text similarity 
     def _text_similarity(self, text1: str, text2: str) -> float:
         """
         Calculates the similarity between two text strings by first normalizing the the text
@@ -336,6 +397,7 @@ class CoordinatedHarassmentLabeler:
         # returns a ratio between 0-1 for similarity score
         return similarity
 
+    # normalize texts within posts for checking similarity
     def _normalize_text(self, text: str) -> str:
         """
         Normalizes text for comparison:
@@ -353,7 +415,6 @@ class CoordinatedHarassmentLabeler:
         # Makes everything lowercase
         text = text.lower()
         
-        #** KENDALL LOOK AT THIS AND FIGURE IT OUT!!!
         # Removes urls (unncessary in searching for similarities)
         text = self.url_regex.sub('', text)
 
@@ -363,6 +424,7 @@ class CoordinatedHarassmentLabeler:
         
         return text.strip()
     
+    # Checking copy and pasted words
     def _detect_repeated_phrases(self, texts: List[str]) -> float:
         """
         Detects repeated phrases across multiple posts
@@ -412,6 +474,7 @@ class CoordinatedHarassmentLabeler:
         # capping ratio at 1
         return min(1.0, ratio)
 
+    # identifying targets of @ mentions
     def _identify_targets(self, post_data: dict) -> Set[str]:
         """
         Gathering all potential targets of harassment in a post - i.e any one that's mentioned
@@ -459,7 +522,6 @@ class CoordinatedHarassmentLabeler:
 
         Args:
             timestamp: Datetime object or ISO string
-
         Returns:
             Datetime object
         """
@@ -478,10 +540,7 @@ class CoordinatedHarassmentLabeler:
         else:
             return datetime.now()
 
-    # ---------------------------
-    # Label Assignment
-    # ---------------------------
-
+    # adds the labels based on the thresholds
     def _labels_from_score(self, score: float) -> List[str]:
         """
         Convert coordination score to appropriate labels.
@@ -506,148 +565,6 @@ class CoordinatedHarassmentLabeler:
             return [LABEL_POTENTIAL_COORDINATION]
         else:
             return []
-       
-       
-
-    # ---------------------------
-    # UNECCESSARY API CODE!
-    # ---------------------------
-
-        
-    # # Entry point for moderation via Bluesky API
-    # def moderate_post(self, url: str) -> List[str]:
-    #     """
-    #     Apply coordinated harassment detection to the post specified by the given url
-    #     The function will: 
-    #         1. Fetch post and extract content
-    #         2. Find potential targets
-    #         3. Gather other posts about the target
-    #         4. compute computation scores based on each of the algorithsm
-    #         5. return the appropriate labels based on the score thresholds
-    #     """
-    #     # Loading post with helper function from label.py
-    #     post = post_from_url(self.client, url)
-
-    #     # Extract post content/metadata in the form of a dict
-    #     post_data = self._extract_post_data(post)
-
-    #     # Identify potential targets mentioned in the post
-    #     targets = self._identify_targets(post_data)
-
-    #     # If no targets are identified there is no harassment deteected
-    #     if len(targets) == 0:
-    #         return []
-
-    #     # Loop through targets to search for areas of potential harassment 
-    #     labels = set() # Using set for automatic deduplication of labels
-    #     for target in targets:
-    #         # Grab all of the recent posts about this target that are within the temporal window
-    #         context_posts = self._get_context_posts(target, post_data['timestamp'])
-
-    #         # Adding current post to post data for analysis
-    #         all_posts = context_posts + [post_data]
-
-    #         # only analyze all_posts if their are enough mentions to meet the threshold
-    #         if len(all_posts) < MIN_POSTS_FOR_COORDINATION:
-    #             continue
-
-    #             # YOU FINISHED HERE!!!!
-    #         # Compute coordination score
-    #         score = self.compute_coordination_score(post_data, all_posts)
-
-    #         # 6. Assign labels based on score
-    #         post_labels = self._labels_from_score(score)
-    #         labels.update(post_labels)
-
-    #         # 7. Cache this post for future temporal analysis
-    #         self._cache_post(target, post_data)
-
-    #     return list(labels)
-    
-    
-    #     # Grabbing necessary metadata
-    # def _extract_post_data(self, post) -> dict:
-    #     """
-    #     Extract relevant data from a post object.
-
-    #     Args:
-    #         post: ATProto post object
-
-    #     Returns:
-    #         Dictionary with post data
-    #     """
-    #     # Extract text
-    #     text = post.record.text
-
-    #     # Extract timestamp
-    #     timestamp = post.record.created_at
-    #     if timestamp:
-    #         timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-    #     else:
-    #         timestamp = datetime.now()
-
-    #     # Extract author
-    #     author_id = post.author
-    #     if author_id:
-    #         author_id = author_id.did or author_id.handle
-    #     else:
-    #         author_id = "unknown"
-
-    #     # Extract post ID
-    #     post_id = post.uri
-
-    #     return {
-    #         'post_id': post_id,
-    #         'author_id': author_id,
-    #         'timestamp': timestamp,
-    #         'text': text
-    #     }
-    # def _get_context_posts(self, target: str, timestamp) -> List[dict]:
-    #     """
-    #     Finding the recent posts about the same target with the temporal window
-    #     Args:
-    #         target: target identifier
-    #         timestamp: timestamp of post (so we can calculate temporal window)
-    #     Return a list of posts within the window
-    #     """
-    #     # Double checking the target has been mentioned previously
-    #     if target not in self.post_dict:
-    #         return []
-
-    #     # Calculating the temporal window starttime using datetime import
-    #     # temporal window = timestamp - # min in temporal window
-    #     temporal_window_end = self._parse_timestamp(timestamp) # turning timestamp to datetime object
-    #     # using timedelta to indicate the unit of time measurement 
-    #     temporal_window_start = temporal_window_end - timedelta(minutes = TEMPORAL_WINDOW_MINUTES)
-
-    #     # Find all posts within temporal_window_start to temporal_window_end that specifically mention the target
-    #     context = []
-    #     for timestamp, post_data in self.post_dict[target]:
-    #         # if the post is within the alloted timeframe
-    #         if temporal_window_start <= timestamp <= temporal_window_end:
-    #             context.append(post_data)
-
-    #     return context
-        
-    # def _cache_post(self, target: str, post_data: dict):
-    #     """
-    #     Cache a post for future temporal analysis.
-
-    #     Args:
-    #         target: Target identifier
-    #         post_data: Post dictionary
-    #     """
-    #     timestamp = self._parse_timestamp(post_data['timestamp'])
-    #     self.post_dict[target].append((timestamp, post_data))
-
-    #     # Clean old posts (beyond 2x temporal window)
-    #     cutoff = datetime.now() - timedelta(minutes=2 * TEMPORAL_WINDOW_MINUTES)
-    #     self.post_dict[target] = [
-    #         (ts, data) for ts, data in self.post_dict[target]
-    #         if ts >= cutoff
-    #     ]
-
-
 
 # Convenience alias for compatibility with testing harness
 AutomatedLabeler = CoordinatedHarassmentLabeler
