@@ -367,12 +367,6 @@ Optimizations Implemented:
 - Timestamp caching to avoid repeated parsing
 - Vectorized similarity computation (NumPy/sklearn)
 - Two-pass batch processing to gather full context efficiently
-
-Expected Performance:
-- Single post (with context): ~1-5 ms
-- Batch of 150 posts: ~0.5-2 seconds
-- Throughput: 75-300 posts/second
-- Scales sub-quadratically due to grouping by target
 """
 
         print(analysis)
@@ -380,6 +374,11 @@ Expected Performance:
 
     def generate_report(self, output_file: str = "performance_report.txt") -> None:
         """Generate a comprehensive performance report"""
+        # Ensure test-results directory exists
+        import os
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+        # Always overwrite existing report
         with open(output_file, 'w') as f:
             f.write("="*70 + "\n")
             f.write("COORDINATED HARASSMENT LABELER - PERFORMANCE TEST REPORT\n")

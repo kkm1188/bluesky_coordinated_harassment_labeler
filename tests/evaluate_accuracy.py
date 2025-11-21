@@ -142,6 +142,11 @@ def analyze_errors(posts, ground_truth, predictions):
 def generate_report(metrics, errors, output_file):
     """Generate comprehensive evaluation report"""
 
+    # Ensure test-results directory exists
+    import os
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Always overwrite existing report
     with open(output_file, 'w') as f:
         f.write("="*80 + "\n")
         f.write("COORDINATED HARASSMENT LABELER - ACCURACY EVALUATION REPORT\n")
@@ -218,45 +223,6 @@ def generate_report(metrics, errors, output_file):
 
         if len(errors['false_negatives']) > 10:
             f.write(f"\n... and {len(errors['false_negatives']) - 10} more false negatives\n")
-
-        # Analysis and Insights
-        f.write("\n\n")
-        f.write("="*80 + "\n")
-        f.write("ANALYSIS & INSIGHTS\n")
-        f.write("="*80 + "\n")
-
-        f.write("\nKey Findings:\n")
-
-        if binary['precision'] > 0.8:
-            f.write("✓ HIGH PRECISION: The labeler rarely flags non-coordination as coordination\n")
-            f.write("  This minimizes false alarms and maintains user trust\n")
-        elif binary['precision'] < 0.6:
-            f.write("✗ LOW PRECISION: Many false positives detected\n")
-            f.write("  Consider raising thresholds or refining similarity detection\n")
-
-        if binary['recall'] > 0.7:
-            f.write("✓ GOOD RECALL: The labeler catches most coordination attempts\n")
-            f.write("  Effective at identifying genuine harassment campaigns\n")
-        elif binary['recall'] < 0.5:
-            f.write("✗ LOW RECALL: Missing many coordination cases\n")
-            f.write("  Consider lowering thresholds or adding more signals\n")
-
-        f.write("\nTrade-offs:\n")
-        if binary['precision'] > binary['recall']:
-            f.write("• Conservative approach: Favors precision over recall\n")
-            f.write("• Better for user experience (fewer false alarms)\n")
-            f.write("• May miss some subtle coordination\n")
-        else:
-            f.write("• Aggressive approach: Favors recall over precision\n")
-            f.write("• Better for safety (catches more harassment)\n")
-            f.write("• May generate more false alarms\n")
-
-        f.write("\nNext Steps:\n")
-        f.write("1. Analyze false positives to refine similarity thresholds\n")
-        f.write("2. Study false negatives to identify missing patterns\n")
-        f.write("3. Consider adjusting coordination score weights (temporal/similarity/behavioral)\n")
-        f.write("4. Test on larger, more diverse datasets\n")
-        f.write("5. Implement confidence scores for borderline cases\n")
 
         f.write("\n" + "="*80 + "\n")
 

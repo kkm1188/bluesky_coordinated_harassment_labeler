@@ -1,7 +1,7 @@
 ================================================================================
 COORDINATED HARASSMENT LABELER - ACCURACY EVALUATION REPORT
 ================================================================================
-Generated: 2025-11-20T19:15:31.763223
+Generated: 2025-11-20T19:40:30.733118
 Evaluator: Leo Li
 Dataset: test-data/data.csv (150 posts with ground truth labels)
 
@@ -155,26 +155,5 @@ False Negatives: 37
    Target: victim
 
 ... and 27 more false negatives
-
-
-================================================================================
-ANALYSIS & INSIGHTS
-================================================================================
-
-Key Findings:
-✓ HIGH PRECISION: The labeler rarely flags non-coordination as coordination
-  This minimizes false alarms and maintains user trust
-
-Trade-offs:
-• Conservative approach: Favors precision over recall
-• Better for user experience (fewer false alarms)
-• May miss some subtle coordination
-
-Next Steps:
-1. Analyze false positives to refine similarity thresholds
-2. Study false negatives to identify missing patterns
-3. Consider adjusting coordination score weights (temporal/similarity/behavioral)
-4. Test on larger, more diverse datasets
-5. Implement confidence scores for borderline cases
 
 ================================================================================

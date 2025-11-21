@@ -1,41 +1,41 @@
 ======================================================================
 COORDINATED HARASSMENT LABELER - PERFORMANCE TEST REPORT
 ======================================================================
-Generated: 2025-11-20T19:04:00.195438
+Generated: 2025-11-20T19:43:55.669479
 Tester: Leo Li
 
 
 SINGLE POST
 ----------------------------------------------------------------------
-mean: 0.0051
-median: 0.0033
-min: 0.0030
-max: 0.0524
-stdev: 0.0075
+mean: 0.0041
+median: 0.0032
+min: 0.0031
+max: 0.0299
+stdev: 0.0039
 samples: 50
 
 BATCH PROCESSING
 ----------------------------------------------------------------------
 total_posts: 150
-total_time_sec: 0.8763
-avg_time_per_post_ms: 5.8421
-throughput_posts_per_sec: 171.1714
-memory_current_mb: 3.1592
-memory_peak_mb: 3.3389
-labels_assigned: 49
+total_time_sec: 0.7157
+avg_time_per_post_ms: 4.7713
+throughput_posts_per_sec: 209.5877
+memory_current_mb: 2.7219
+memory_peak_mb: 2.9506
+labels_assigned: 50
 
 SCALABILITY
 ----------------------------------------------------------------------
-tiny: {'num_posts': 10, 'total_time_sec': 0.014179718000377761, 'avg_time_per_post_ms': 1.4179718000377761, 'throughput': 705.2326428306677}
-small: {'num_posts': 100, 'total_time_sec': 0.5399526510000214, 'avg_time_per_post_ms': 5.399526510000214, 'throughput': 185.20142426339532}
-medium: {'num_posts': 1000, 'total_time_sec': 13.351002920999235, 'avg_time_per_post_ms': 13.351002920999235, 'throughput': 74.90074011047827}
-large: {'num_posts': 10000, 'total_time_sec': 151.21168853699965, 'avg_time_per_post_ms': 15.121168853699963, 'throughput': 66.13245375904339}
+tiny: {'num_posts': 10, 'total_time_sec': 0.013215476000027593, 'avg_time_per_post_ms': 1.3215476000027593, 'throughput': 756.6885975184791}
+small: {'num_posts': 100, 'total_time_sec': 0.6503766150000274, 'avg_time_per_post_ms': 6.503766150000274, 'throughput': 153.7570658194649}
+medium: {'num_posts': 1000, 'total_time_sec': 9.579717969000058, 'avg_time_per_post_ms': 9.579717969000058, 'throughput': 104.38720672529165}
+large: {'num_posts': 10000, 'total_time_sec': 107.30018763999999, 'avg_time_per_post_ms': 10.730018764, 'throughput': 93.19648194419506}
 
 WORST CASE
 ----------------------------------------------------------------------
 num_posts: 100
-total_time_sec: 0.2983
-avg_time_per_post_ms: 2.9826
+total_time_sec: 0.2886
+avg_time_per_post_ms: 2.8861
 detection_rate: 0.9900
 labels_assigned: 99
 
@@ -72,12 +72,6 @@ Optimizations Implemented:
 - Timestamp caching to avoid repeated parsing
 - Vectorized similarity computation (NumPy/sklearn)
 - Two-pass batch processing to gather full context efficiently
-
-Expected Performance:
-- Single post (with context): ~1-5 ms
-- Batch of 150 posts: ~0.5-2 seconds
-- Throughput: 75-300 posts/second
-- Scales sub-quadratically due to grouping by target
 
 
 ======================================================================
