@@ -1,0 +1,7 @@
+atproto
+pandas
+numpy
+scikit-learn
+Pillow
+requests
+python-dotenv

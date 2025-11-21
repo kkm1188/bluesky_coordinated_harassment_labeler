@@ -1,0 +1,180 @@
+================================================================================
+COORDINATED HARASSMENT LABELER - ACCURACY EVALUATION REPORT
+================================================================================
+Generated: 2025-11-20T19:15:31.763223
+Evaluator: Leo Li
+Dataset: test-data/data.csv (150 posts with ground truth labels)
+
+================================================================================
+BINARY CLASSIFICATION METRICS (Coordination vs No Coordination)
+================================================================================
+Accuracy:  0.7200 (72.00%)
+Precision: 0.8889 (88.89%)
+Recall:    0.5195 (51.95%)
+F1 Score:  0.6557
+
+Confusion Matrix:
+  True Positives:  40 (correctly identified coordination)
+  True Negatives:  68 (correctly identified no coordination)
+  False Positives: 5 (flagged coordination incorrectly)
+  False Negatives: 37 (missed coordination)
+
+================================================================================
+MULTI-CLASS CLASSIFICATION METRICS (Exact Label Matching)
+================================================================================
+Overall Accuracy: 0.5467 (54.67%)
+Exact Matches: 82/150
+
+================================================================================
+PER-CLASS METRICS
+================================================================================
+
+confirmed-coordination-high-risk:
+  Precision: 1.0000 (100.00%)
+  Recall:    0.2000 (20.00%)
+  F1 Score:  0.3333
+  TP: 6, FP: 0, FN: 24, TN: 120
+
+likely-coordination:
+  Precision: 0.1250 (12.50%)
+  Recall:    0.0909 (9.09%)
+  F1 Score:  0.1053
+  TP: 2, FP: 14, FN: 20, TN: 114
+
+potential-coordination:
+  Precision: 0.2609 (26.09%)
+  Recall:    0.2400 (24.00%)
+  F1 Score:  0.2500
+  TP: 6, FP: 17, FN: 19, TN: 108
+
+none:
+  Precision: 0.6476 (64.76%)
+  Recall:    0.9315 (93.15%)
+  F1 Score:  0.7640
+  TP: 68, FP: 37, FN: 5, TN: 40
+
+================================================================================
+ERROR ANALYSIS
+================================================================================
+
+False Positives: 5
+--------------------------------------------------------------------------------
+
+1. post_028
+   Text: @athlete what an amazing game to watch - championship glory at its finest! The intensity and skill o...
+   Ground Truth: none
+   Predicted: potential-coordination
+   Target: athlete
+
+2. post_029
+   Text: @athlete your championship performance tonight was absolutely historic and will be remembered for ye...
+   Ground Truth: none
+   Predicted: potential-coordination
+   Target: athlete
+
+3. post_039
+   Text: @blogger have you considered some alternative approaches to this problem? There's interesting resear...
+   Ground Truth: none
+   Predicted: potential-coordination
+   Target: blogger
+
+4. post_040
+   Text: @blogger what sources did you primarily reference for this piece? I'd love to dive deeper into the t...
+   Ground Truth: none
+   Predicted: potential-coordination
+   Target: blogger
+
+5. post_055
+   Text: both @user1 and @user2 are equally responsible for this complete mess that unfolded. Neither of you ...
+   Ground Truth: none
+   Predicted: potential-coordination
+   Target: user1
+
+
+False Negatives: 37
+--------------------------------------------------------------------------------
+
+1. post_001
+   Text: @alice is a complete scammer and everyone needs to be warned about this person immediately. I've see...
+   Ground Truth: confirmed-coordination-high-risk
+   Predicted: none
+   Target: alice
+
+2. post_006
+   Text: @bob honestly the worst developer I've ever worked with in my entire career. The code quality is ter...
+   Ground Truth: likely-coordination
+   Predicted: none
+   Target: bob
+
+3. post_010
+   Text: @celebrity I really have to disagree with your recent stance on climate policy. The approach seems s...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: celebrity
+
+4. post_013
+   Text: @celebrity have you thought more about your climate policy stance recently? I think there might be s...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: celebrity
+
+5. post_022
+   Text: @megacorp please address the labor violations that have been documented by multiple sources immediat...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: megacorp
+
+6. post_030
+   Text: @expert oh sure, you're definitely an expert on this topic... The analysis you provided seems really...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: expert
+
+7. post_031
+   Text: @expert wow, such amazing expertise you have there on display. The arguments presented completely ig...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: expert
+
+8. post_032
+   Text: @expert yes, clearly you know everything about this subject matter... except apparently the basics. ...
+   Ground Truth: potential-coordination
+   Predicted: none
+   Target: expert
+
+9. post_033
+   Text: @victim this person absolutely cannot be trusted at all based on their past behavior. I've seen enou...
+   Ground Truth: likely-coordination
+   Predicted: none
+   Target: victim
+
+10. post_035
+   Text: @victim honestly can't trust this person whatsoever given the track record. I've seen too many red f...
+   Ground Truth: likely-coordination
+   Predicted: none
+   Target: victim
+
+... and 27 more false negatives
+
+
+================================================================================
+ANALYSIS & INSIGHTS
+================================================================================
+
+Key Findings:
+✓ HIGH PRECISION: The labeler rarely flags non-coordination as coordination
+  This minimizes false alarms and maintains user trust
+
+Trade-offs:
+• Conservative approach: Favors precision over recall
+• Better for user experience (fewer false alarms)
+• May miss some subtle coordination
+
+Next Steps:
+1. Analyze false positives to refine similarity thresholds
+2. Study false negatives to identify missing patterns
+3. Consider adjusting coordination score weights (temporal/similarity/behavioral)
+4. Test on larger, more diverse datasets
+5. Implement confidence scores for borderline cases
+
+================================================================================

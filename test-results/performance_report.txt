@@ -1,0 +1,83 @@
+======================================================================
+COORDINATED HARASSMENT LABELER - PERFORMANCE TEST REPORT
+======================================================================
+Generated: 2025-11-20T19:04:00.195438
+Tester: Leo Li
+
+
+SINGLE POST
+----------------------------------------------------------------------
+mean: 0.0051
+median: 0.0033
+min: 0.0030
+max: 0.0524
+stdev: 0.0075
+samples: 50
+
+BATCH PROCESSING
+----------------------------------------------------------------------
+total_posts: 150
+total_time_sec: 0.8763
+avg_time_per_post_ms: 5.8421
+throughput_posts_per_sec: 171.1714
+memory_current_mb: 3.1592
+memory_peak_mb: 3.3389
+labels_assigned: 49
+
+SCALABILITY
+----------------------------------------------------------------------
+tiny: {'num_posts': 10, 'total_time_sec': 0.014179718000377761, 'avg_time_per_post_ms': 1.4179718000377761, 'throughput': 705.2326428306677}
+small: {'num_posts': 100, 'total_time_sec': 0.5399526510000214, 'avg_time_per_post_ms': 5.399526510000214, 'throughput': 185.20142426339532}
+medium: {'num_posts': 1000, 'total_time_sec': 13.351002920999235, 'avg_time_per_post_ms': 13.351002920999235, 'throughput': 74.90074011047827}
+large: {'num_posts': 10000, 'total_time_sec': 151.21168853699965, 'avg_time_per_post_ms': 15.121168853699963, 'throughput': 66.13245375904339}
+
+WORST CASE
+----------------------------------------------------------------------
+num_posts: 100
+total_time_sec: 0.2983
+avg_time_per_post_ms: 2.9826
+detection_rate: 0.9900
+labels_assigned: 99
+
+COMPLEXITY
+----------------------------------------------------------------------
+
+Big-O Complexity of CoordinatedHarassmentLabeler:
+
+1. Overall Batch Processing: O(N log N)
+   - N = total number of posts
+   - Dominated by timestamp sorting and binary search
+
+2. Temporal Signal Computation: O(N log N + M)
+   - Sorting posts by timestamp: O(N log N)
+   - Binary search for time windows: O(log N) per target
+   - M = posts mentioning each target (typically M << N)
+
+3. Content Similarity Signal: O(M²) per target group
+   - TF-IDF vectorization: O(M × D) where D = vocabulary size
+   - Cosine similarity matrix: O(M²)
+   - In practice: M is small (typically < 20 posts per target)
+   - Vectorized operations make this very fast
+
+4. Behavioral Signal: O(M)
+   - Linear scan through posts targeting same user
+   - Account age checks: O(1) per post
+
+5. Memory Complexity: O(N + V)
+   - N = number of posts stored
+   - V = vocabulary size for TF-IDF (typically < 10,000 terms)
+
+Optimizations Implemented:
+- Binary search instead of linear scan for temporal windows
+- Timestamp caching to avoid repeated parsing
+- Vectorized similarity computation (NumPy/sklearn)
+- Two-pass batch processing to gather full context efficiently
+
+Expected Performance:
+- Single post (with context): ~1-5 ms
+- Batch of 150 posts: ~0.5-2 seconds
+- Throughput: 75-300 posts/second
+- Scales sub-quadratically due to grouping by target
+
+
+======================================================================
