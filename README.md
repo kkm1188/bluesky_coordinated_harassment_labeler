@@ -12,26 +12,65 @@
 
 ---
 
-## Submitted Files (What to Grade)
+## Submitted Files
+
+### Core Labelers
 
 | Path | Description |
 | --- | --- |
-| `pylabel/automated_labeler.py` | Part I labeler (T&S words, news domains, dog images). |
-| `pylabel/policy_proposal_labeler.py` | Coordinated harassment detector with temporal, similarity, and behavioral signals. |
-| `pylabel/label.py` | Shared helpers for fetching posts and applying labels. |
-| `pylabel/__init__.py` | Package initializer. |
-| `tests/test_labeler.py` | Provided harness for Part I regression tests. |
-| `tests/test_coordination_detection.py` | Sanity checks for the coordination detector. |
-| `tests/evaluate_accuracy.py` | Accuracy/precision/recall evaluator for `test-data/data.csv`. |
-| `tests/performance_test.py` | Performance & scalability suite (latency, throughput, memory). |
+| `pylabel/automated_labeler.py` | Part I labeler orchestrating the T&S keywords, news-domain, and perceptual dog detectors. |
+| `pylabel/policy_proposal_labeler.py` | Coordinated harassment detector combining temporal, similarity, and behavioral signals (primary Part II deliverable). |
+| `pylabel/label.py` | Shared helpers for fetching posts, input validation, and label-application utilities. |
+| `pylabel/__init__.py` | Exposes `AutomatedLabeler` for compatibility with the harness. |
+
+### Testing & Evaluation Scripts
+
+| Path | Description |
+| --- | --- |
+| `tests/test_labeler.py` | Regression harness for Part I modes (dogs/news/T&S). |
+| `tests/test_coordination_detection.py` | Scenario-based sanity checks for the coordination detector. |
+| `tests/evaluate_accuracy.py` | Accuracy/precision/recall evaluator for `test-data/data.csv`; writes `test-results/accuracy_evaluation.txt`. |
+| `tests/performance_test.py` | Stress test measuring latency, throughput, and memory; writes `test-results/performance_report.txt`. |
+
+### Datasets & Sample Inputs
+
+| Path | Description |
+| --- | --- |
 | `test-data/data.csv` | 150-post labeled dataset with ground-truth coordination labels. |
-| `test-data/input-posts-*.csv` | Part I sample CSV inputs (dogs, citations/news, T&S words). |
-| `labeler-inputs/` | Static resources (dog reference images, news domains, T&S data). |
-| `test-results/accuracy_evaluation.txt` | Generated accuracy report (should be reproduced by graders). |
-| `test-results/performance_report.txt` | Generated performance report (should be reproduced by graders). |
-| `README_COORDINATION_DETECTION.md` | Detailed design/ethics/analysis document. |
-| `README_FINAL.md` | Submission README. |
-| `requirements.txt` | Python dependency lock. |
+| `test-data/input-posts-dogs.csv` | Sample CSV for perceptual hash dog detector. |
+| `test-data/input-posts-cite.csv` | Sample CSV for citation/news detection. |
+| `test-data/input-posts-t-and-s.csv` | Sample CSV for T&S keyword detection. |
+
+### Static Labeler Inputs
+
+| Path | Description |
+| --- | --- |
+| `labeler-inputs/dog-list-images/` | 25 reference dog images (perceptual hash fingerprints). |
+| `labeler-inputs/news-domains.csv` | Curated list of reputable news domains for citation detection. |
+| `labeler-inputs/t-and-s-domains.csv` | Trust & safety domains blacklist. |
+| `labeler-inputs/t-and-s-words.csv` | Canonical T&S keyword list used in Part I. |
+
+### Generated Reports
+
+| Path | Description |
+| --- | --- |
+| `test-results/accuracy_evaluation.txt` | Generated report with accuracy/precision/recall numbers (reproducible via script). |
+| `test-results/performance_report.txt` | Generated report summarizing latency/throughput/memory metrics. |
+
+### Documentation
+
+| Path | Description |
+| --- | --- |
+| `README_COORDINATION_DETECTION.md` | In-depth design, ethics, weighting rationale, and known limitations. |
+| `README_FINAL.md` | Submission wrapper with grading logistics. |
+| `README_instructions.md` | Original Instructions for the Assignment |
+
+### Utilities & Dependencies
+
+| Path | Description |
+| --- | --- |
+| `get_post_test.py` | Utility for manual ingestion/testing during development. |
+| `requirements.txt` | Locked Python dependencies (use with `pip install -r`). |
 
 ---
 
@@ -114,6 +153,6 @@ After running `tests/performance_test.py`, confirm highlights in `test-results/p
 
 ## Notes on Code Documentation
 
-- Every public method in `pylabel/policy_proposal_labeler.py` has a docstring describing real behavior (temporal binary-search windowing, TF-IDF similarity, behavioral heuristics).  
-- Inline comments call out the non-obvious pieces (timestamp caching, binary search boundaries, fallback similarity handling).  
-- If additional clarification is required, cross-reference `README_COORDINATION_DETECTION.md`, which mirrors the current implementation—including weights, thresholds, and known limitations.
+- Core public methods in `pylabel/policy_proposal_labeler.py` include docstrings that align with the implemented temporal windowing, TF-IDF similarity, and behavioral heuristics.  
+- Inline comments highlight the non-obvious pieces (timestamp caching, binary search boundaries, fallback similarity handling).  
+- For deeper analysis or threshold rationales, refer to `README_COORDINATION_DETECTION.md`, which mirrors the production implementation—including weights, thresholds, and limitations.
