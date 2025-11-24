@@ -12,65 +12,35 @@
 
 ---
 
-## Submitted Files
+## Submitted Files (Post-Starter Contributions)
 
-### Core Labelers
-
-| Path | Description |
-| --- | --- |
-| `pylabel/automated_labeler.py` | Part I labeler orchestrating the T&S keywords, news-domain, and perceptual dog detectors. |
-| `pylabel/policy_proposal_labeler.py` | Coordinated harassment detector combining temporal, similarity, and behavioral signals (primary Part II deliverable). |
-| `pylabel/label.py` | Shared helpers for fetching posts, input validation, and label-application utilities. |
-| `pylabel/__init__.py` | Exposes `AutomatedLabeler` for compatibility with the harness. |
-
-### Testing & Evaluation Scripts
+### Coordination Detector & Tooling
 
 | Path | Description |
 | --- | --- |
-| `tests/test_labeler.py` | Regression harness for Part I modes (dogs/news/T&S). |
-| `tests/test_coordination_detection.py` | Scenario-based sanity checks for the coordination detector. |
-| `tests/evaluate_accuracy.py` | Accuracy/precision/recall evaluator for `test-data/data.csv`; writes `test-results/accuracy_evaluation.txt`. |
-| `tests/performance_test.py` | Stress test measuring latency, throughput, and memory; writes `test-results/performance_report.txt`. |
+| `pylabel/policy_proposal_labeler.py` | Final coordination detector (temporal, similarity, behavioral signals, caching, TF‑IDF scoring). |
+| `tests/test_coordination_detection.py` | Scenario-based sanity suite covering attack, pile-on, and benign cases. |
+| `tests/evaluate_accuracy.py` | Accuracy/precision/recall evaluator for the 150-post dataset; emits `test-results/accuracy_evaluation.txt`. |
+| `tests/performance_test.py` | Performance harness measuring latency, throughput, memory; emits `test-results/performance_report.txt`. |
+| `run.py` | Unified CLI to launch the coordination/accuracy/performance suites without touching the starter Part I harness. |
 
-### Datasets & Sample Inputs
-
-| Path | Description |
-| --- | --- |
-| `test-data/data.csv` | 150-post labeled dataset with ground-truth coordination labels. |
-| `test-data/input-posts-dogs.csv` | Sample CSV for perceptual hash dog detector. |
-| `test-data/input-posts-cite.csv` | Sample CSV for citation/news detection. |
-| `test-data/input-posts-t-and-s.csv` | Sample CSV for T&S keyword detection. |
-
-### Static Labeler Inputs
+### Datasets, Reports, and Requirements
 
 | Path | Description |
 | --- | --- |
-| `labeler-inputs/dog-list-images/` | 25 reference dog images (perceptual hash fingerprints). |
-| `labeler-inputs/news-domains.csv` | Curated list of reputable news domains for citation detection. |
-| `labeler-inputs/t-and-s-domains.csv` | Trust & safety domains blacklist. |
-| `labeler-inputs/t-and-s-words.csv` | Canonical T&S keyword list used in Part I. |
-
-### Generated Reports
-
-| Path | Description |
-| --- | --- |
-| `test-results/accuracy_evaluation.txt` | Generated report with accuracy/precision/recall numbers (reproducible via script). |
-| `test-results/performance_report.txt` | Generated report summarizing latency/throughput/memory metrics. |
+| `test-data/data.csv` | 150-post labeled dataset produced for coordination accuracy evaluation. |
+| `test-results/accuracy_evaluation.txt` | Generated accuracy/precision/recall report. |
+| `test-results/performance_report.txt` | Generated latency/throughput/memory report. |
+| `requirements.txt` | Dependency lockfile for the coordination detector stack. |
 
 ### Documentation
 
 | Path | Description |
 | --- | --- |
-| `README_COORDINATION_DETECTION.md` | In-depth design, ethics, weighting rationale, and known limitations. |
-| `README_FINAL.md` | Submission wrapper with grading logistics. |
-| `README_instructions.md` | Original Instructions for the Assignment |
-
-### Utilities & Dependencies
-
-| Path | Description |
-| --- | --- |
-| `get_post_test.py` | Utility for manual ingestion/testing during development. |
-| `requirements.txt` | Locked Python dependencies (use with `pip install -r`). |
+| `README.md` | Submission write-up (this file). |
+| `README_COORDINATION_DETECTION.md` | Detailed design doc with weights, heuristics, and limitations. |
+| `README_FINAL.md` | Final submission checklist/readme. |
+| `README_instructions.md` | Assignment instructions included for completeness. |
 
 ---
 
@@ -92,37 +62,42 @@
    pip install --upgrade pip
    pip install -r requirements.txt
    ```
-5. (Optional) **Set PYTHONPATH** for ad‑hoc shells:  
+5. **Set PYTHONPATH** (required when running scripts outside `run.py`):  
    ```bash
    export PYTHONPATH=.
+   ```
+6. **Launch the unified CLI runner** to pick tests interactively (recommended):  
+
+   ```bash
+   python run.py
    ```
 
 ---
 
-## Run the Labeler on Sample Posts
+## Run the Coordination Detector
 
-These commands assume the virtual environment is active and `PYTHONPATH=.`.
+The recommended path is to run `python run.py` and select from the prompt:
 
-1. **Dog image detector** (perceptual hashing):  
-   ```bash
-   python tests/test_labeler.py labeler-inputs test-data/input-posts-dogs.csv
-   ```
-2. **News/citation detector**:  
-   ```bash
-   python tests/test_labeler.py labeler-inputs test-data/input-posts-cite.csv
-   ```
-3. **T&S word detector**:  
-   ```bash
-   python tests/test_labeler.py labeler-inputs test-data/input-posts-t-and-s.csv
-   ```
-4. **Coordinated harassment sanity scenarios**:  
-   ```bash
-   PYTHONPATH=. python tests/test_coordination_detection.py
-   ```
-   Expected qualitative outcomes:  
-   - _Coordinated Attack_ → `confirmed-coordination-high-risk`  
-   - _Mild Pile-On_ → `potential-coordination` (sometimes `likely`)  
-   - _Normal Criticism_ / _Single Post_ → no label
+| Menu | What it runs |
+| --- | --- |
+| `1` | `tests/test_coordination_detection.py` (scenario sanity suite) |
+| `2` | `tests/evaluate_accuracy.py` |
+| `3` | `tests/performance_test.py` |
+| `a` | Runs all of the above sequentially |
+
+If you prefer manual invocation (or need to capture stdout separately), activate the venv, set `PYTHONPATH=.`, and run:
+
+```bash
+PYTHONPATH=. python tests/test_coordination_detection.py
+PYTHONPATH=. python tests/evaluate_accuracy.py
+PYTHONPATH=. python tests/performance_test.py
+```
+
+Expected qualitative outcomes for `tests/test_coordination_detection.py`:  
+
+- _Coordinated Attack_ → `confirmed-coordination-high-risk`  
+- _Mild Pile-On_ → `potential-coordination`
+- _Normal Criticism_ / _Single Post_ → no label
 
 ---
 
