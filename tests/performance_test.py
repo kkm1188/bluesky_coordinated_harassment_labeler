@@ -316,47 +316,6 @@ class PerformanceTester:
         self.results['worst_case'] = results
         return results
 
-    def test_complexity_analysis(self) -> None:
-        """
-        Analyze and report the Big-O complexity of key operations
-        """
-        print(f"\n{'='*60}")
-        print("COMPLEXITY ANALYSIS")
-        print(f"{'='*60}")
-
-        analysis = """
-Big-O Complexity of CoordinatedHarassmentLabeler:
-
-1. Overall Batch Processing: O(N log N)
-   - N = total number of posts
-   - Dominated by timestamp sorting and binary search
-
-2. Temporal Signal Computation: O(N log N + M)
-   - Sorting posts by timestamp: O(N log N)
-   - Binary search for time windows: O(log N) per target
-   - M = posts mentioning each target (typically M << N)
-
-3. Content Similarity Signal: O(M²) per target group
-   - TF-IDF vectorization: O(M × D) where D = vocabulary size
-   - Cosine similarity matrix: O(M²)
-   - In practice: M is small (typically < 20 posts per target)
-   - Vectorized operations make this very fast
-
-4. Behavioral Signal: O(M)
-   - Linear scan through posts targeting same user
-   - Account age checks: O(1) per post
-
-5. Memory Complexity: O(N + V)
-   - N = number of posts stored
-   - V = vocabulary size for TF-IDF (typically < 10,000 terms)
-
-Optimizations Implemented:
-- Binary search instead of linear scan for temporal windows
-- Timestamp caching to avoid repeated parsing
-- Vectorized similarity computation (NumPy/sklearn)
-- Two-pass batch processing to gather full context efficiently
-"""
-
         print(analysis)
         self.results['complexity'] = analysis
 
@@ -372,7 +331,6 @@ Optimizations Implemented:
             f.write("COORDINATED HARASSMENT LABELER - PERFORMANCE TEST REPORT\n")
             f.write("="*70 + "\n")
             f.write(f"Generated: {datetime.now().isoformat()}\n")
-            f.write(f"Tester: Leo Li\n")
             f.write("\n")
 
             # Write all results
@@ -397,7 +355,6 @@ def main():
     """Run comprehensive performance tests"""
     print("\n" + "="*70)
     print("COORDINATED HARASSMENT LABELER - PERFORMANCE TESTING SUITE")
-    print("Author: Leo Li | CS 5342 Assignment 3")
     print("="*70)
 
     tester = PerformanceTester()
@@ -420,9 +377,6 @@ def main():
 
     # Test 4: Worst-case scenario
     tester.test_worst_case_scenario()
-
-    # Test 5: Complexity analysis
-    tester.test_complexity_analysis()
 
     # Generate final report
     tester.generate_report("test-results/performance_report.txt")
