@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""
-Accuracy Evaluation Script for Coordinated Harassment Labeler
-Evaluates precision, recall, F1, and accuracy against ground truth labels
-Author: Leo Li - CS 5342 Assignment 3
-"""
 
 import csv
 from collections import defaultdict
