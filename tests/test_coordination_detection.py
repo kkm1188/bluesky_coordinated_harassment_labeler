@@ -1,8 +1,3 @@
-"""
-Test script for coordinated harassment detection.
-Provides sanity checks with example scenarios.
-"""
-
 from datetime import datetime, timedelta
 from pylabel.policy_proposal_labeler import CoordinatedHarassmentLabeler
 
