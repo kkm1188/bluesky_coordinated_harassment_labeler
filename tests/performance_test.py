@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-Performance Testing Script for Coordinated Harassment Labeler
-Author: Leo Li
-CS 5342 - Assignment 3
-
-This script measures the computational performance and efficiency of the
-CoordinatedHarassmentLabeler, including:
-- Single post processing time
-- Batch processing time
-- Memory usage
-- Scalability under stress conditions
-"""
 
 import time
 import tracemalloc
