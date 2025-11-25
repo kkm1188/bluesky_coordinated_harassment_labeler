@@ -6,7 +6,7 @@
 **Group & IDs**  
 
 - Kendall Miller — kkm88
-- Leo Li — zk2262
+- Leo Li — zl2262
 - Amy Chen — ac3295
 - Tianyin Zhang — tz445
 
