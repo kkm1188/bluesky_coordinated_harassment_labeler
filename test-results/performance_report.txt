@@ -1,77 +1,41 @@
 ======================================================================
 COORDINATED HARASSMENT LABELER - PERFORMANCE TEST REPORT
 ======================================================================
-Generated: 2025-11-20T19:43:55.669479
-Tester: Leo Li
+Generated: 2025-11-25T14:06:09.452392
 
 
 SINGLE POST
 ----------------------------------------------------------------------
-mean: 0.0041
-median: 0.0032
-min: 0.0031
-max: 0.0299
-stdev: 0.0039
+mean: 0.0046
+median: 0.0036
+min: 0.0033
+max: 0.0374
+stdev: 0.0049
 samples: 50
 
 BATCH PROCESSING
 ----------------------------------------------------------------------
 total_posts: 150
-total_time_sec: 0.7157
-avg_time_per_post_ms: 4.7713
-throughput_posts_per_sec: 209.5877
-memory_current_mb: 2.7219
-memory_peak_mb: 2.9506
-labels_assigned: 50
+total_time_sec: 1.2012
+avg_time_per_post_ms: 8.0080
+throughput_posts_per_sec: 124.8751
+memory_current_mb: 4.0029
+memory_peak_mb: 4.1880
+labels_assigned: 51
 
 SCALABILITY
 ----------------------------------------------------------------------
-tiny: {'num_posts': 10, 'total_time_sec': 0.013215476000027593, 'avg_time_per_post_ms': 1.3215476000027593, 'throughput': 756.6885975184791}
-small: {'num_posts': 100, 'total_time_sec': 0.6503766150000274, 'avg_time_per_post_ms': 6.503766150000274, 'throughput': 153.7570658194649}
-medium: {'num_posts': 1000, 'total_time_sec': 9.579717969000058, 'avg_time_per_post_ms': 9.579717969000058, 'throughput': 104.38720672529165}
-large: {'num_posts': 10000, 'total_time_sec': 107.30018763999999, 'avg_time_per_post_ms': 10.730018764, 'throughput': 93.19648194419506}
+tiny: {'num_posts': 10, 'total_time_sec': 0.026186783999946783, 'avg_time_per_post_ms': 2.6186783999946783, 'throughput': 381.8720160528426}
+small: {'num_posts': 100, 'total_time_sec': 0.8037923709998722, 'avg_time_per_post_ms': 8.037923709998722, 'throughput': 124.41023777770577}
+medium: {'num_posts': 1000, 'total_time_sec': 14.209295264000048, 'avg_time_per_post_ms': 14.209295264000048, 'throughput': 70.37646705347517}
+large: {'num_posts': 10000, 'total_time_sec': 141.71157243899984, 'avg_time_per_post_ms': 14.171157243899984, 'throughput': 70.56586718988338}
 
 WORST CASE
 ----------------------------------------------------------------------
 num_posts: 100
-total_time_sec: 0.2886
-avg_time_per_post_ms: 2.8861
+total_time_sec: 0.3026
+avg_time_per_post_ms: 3.0261
 detection_rate: 0.9900
 labels_assigned: 99
-
-COMPLEXITY
-----------------------------------------------------------------------
-
-Big-O Complexity of CoordinatedHarassmentLabeler:
-
-1. Overall Batch Processing: O(N log N)
-   - N = total number of posts
-   - Dominated by timestamp sorting and binary search
-
-2. Temporal Signal Computation: O(N log N + M)
-   - Sorting posts by timestamp: O(N log N)
-   - Binary search for time windows: O(log N) per target
-   - M = posts mentioning each target (typically M << N)
-
-3. Content Similarity Signal: O(M²) per target group
-   - TF-IDF vectorization: O(M × D) where D = vocabulary size
-   - Cosine similarity matrix: O(M²)
-   - In practice: M is small (typically < 20 posts per target)
-   - Vectorized operations make this very fast
-
-4. Behavioral Signal: O(M)
-   - Linear scan through posts targeting same user
-   - Account age checks: O(1) per post
-
-5. Memory Complexity: O(N + V)
-   - N = number of posts stored
-   - V = vocabulary size for TF-IDF (typically < 10,000 terms)
-
-Optimizations Implemented:
-- Binary search instead of linear scan for temporal windows
-- Timestamp caching to avoid repeated parsing
-- Vectorized similarity computation (NumPy/sklearn)
-- Two-pass batch processing to gather full context efficiently
-
 
 ======================================================================
