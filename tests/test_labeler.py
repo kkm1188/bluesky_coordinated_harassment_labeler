@@ -1,5 +1,3 @@
-"""Script for testing the automated labeler"""
-
 import argparse
 import json
 import os
