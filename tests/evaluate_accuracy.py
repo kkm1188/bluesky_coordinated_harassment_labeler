@@ -147,7 +147,6 @@ def generate_report(metrics, errors, output_file):
         f.write("COORDINATED HARASSMENT LABELER - ACCURACY EVALUATION REPORT\n")
         f.write("="*80 + "\n")
         f.write(f"Generated: {datetime.now().isoformat()}\n")
-        f.write(f"Evaluator: Leo Li\n")
         f.write(f"Dataset: test-data/data.csv (150 posts with ground truth labels)\n")
         f.write("\n")
 
